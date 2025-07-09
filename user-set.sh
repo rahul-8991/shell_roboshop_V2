@@ -55,6 +55,7 @@ cp $SCRIPT_DIR/user.service /etc/systemd/system/user.service
 systemctl daemon-reload &>>$LOG_FILE
 systemctl enable user  &>>$LOG_FILE
 systemctl start user
+echo "user service started"
 
 END_TIME=$(date +%s)
 TOTAL_TIME=$(( $END_TIME - $START_TIME ))
