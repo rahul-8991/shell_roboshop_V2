@@ -2,6 +2,7 @@
 
 read -s -p "Enter SSH password: " PASSWORD
 echo
+echo "entered password is correct"
 
 AMI_ID="ami-09c813fb71547fc4f"
 SG_ID="sg-0c353a79d89785c5b"
