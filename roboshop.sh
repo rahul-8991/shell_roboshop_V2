@@ -1,8 +1,7 @@
 #!/bin/bash
 
 read -s -p "Enter SSH password: " PASSWORD
-echo
-echo "entered password is correct"
+echo -e "\n🔐 Password captured. Proceeding..."
 
 AMI_ID="ami-09c813fb71547fc4f"
 SG_ID="sg-0c353a79d89785c5b"
@@ -41,7 +40,7 @@ do
     --hosted-zone-id "$ZONE_ID" \
     --change-batch '{
       "Comment": "Update DNS for EC2 instance",
-      "Changes": [{
+      "Changes": [ {
         "Action": "UPSERT",
         "ResourceRecordSet": {
           "Name": "'"$RECORD_NAME"'",
@@ -60,30 +59,26 @@ set -e
 rm -rf $CLONE_DIR
 git clone $GIT_REPO $CLONE_DIR
 
-sudo bash -c '
-INSTANCE_NAME="$instance"
-cd $CLONE_DIR || exit 1
-source ./common.sh
+sudo INSTANCE_NAME="$instance" CLONE_DIR="$CLONE_DIR" bash -c '
+cd "\$CLONE_DIR" || exit 1
+source "\$CLONE_DIR/common.sh"
 
 if [ "\$INSTANCE_NAME" == "mongodb" ]; then
   app_name=mongodb
   check_root
 
-  cp mongo.repo /etc/yum.repos.d/mongodb.repo
+  cp "\$CLONE_DIR/mongo.repo" /etc/yum.repos.d/mongodb.repo
   VALIDATE \$? "Copying MongoDB repo"
 
+  dnf makecache -y &>>\$LOG_FILE
   dnf install mongodb-org -y &>>\$LOG_FILE
   VALIDATE \$? "Installing mongodb server"
 
   systemctl enable mongod &>>\$LOG_FILE
-  VALIDATE \$? "Enabling MongoDB"
-
   systemctl start mongod &>>\$LOG_FILE
   VALIDATE \$? "Starting MongoDB"
 
   sed -i "s/127.0.0.1/0.0.0.0/g" /etc/mongod.conf
-  VALIDATE \$? "Editing MongoDB conf"
-
   systemctl restart mongod &>>\$LOG_FILE
   VALIDATE \$? "Restarting MongoDB"
 
@@ -96,7 +91,7 @@ elif [ "\$INSTANCE_NAME" == "catalogue" ]; then
   nodejs_setup
   systemd_setup
 
-  cp mongo.repo /etc/yum.repos.d/mongo.repo 
+  cp "\$CLONE_DIR/mongo.repo" /etc/yum.repos.d/mongo.repo 
   dnf install mongodb-mongosh -y &>>\$LOG_FILE
   VALIDATE \$? "Installing MongoDB Client"
 
@@ -114,34 +109,19 @@ elif [ "\$INSTANCE_NAME" == "frontend" ]; then
   check_root
 
   dnf module disable nginx -y &>>\$LOG_FILE
-  VALIDATE \$? "Disabling Default Nginx"
-
   dnf module enable nginx:1.24 -y &>>\$LOG_FILE
-  VALIDATE \$? "Enabling Nginx:1.24"
-
   dnf install nginx -y &>>\$LOG_FILE
-  VALIDATE \$? "Installing Nginx"
-
   systemctl enable nginx &>>\$LOG_FILE
   systemctl start nginx
   VALIDATE \$? "Starting Nginx"
 
   rm -rf /usr/share/nginx/html/* &>>\$LOG_FILE
-  VALIDATE \$? "Removing default content"
-
   curl -o /tmp/frontend.zip https://roboshop-artifacts.s3.amazonaws.com/frontend-v3.zip &>>\$LOG_FILE
-  VALIDATE \$? "Downloading frontend"
-
-  cd /usr/share/nginx/html 
+  cd /usr/share/nginx/html
   unzip /tmp/frontend.zip &>>\$LOG_FILE
-  VALIDATE \$? "Unzipping frontend"
 
   rm -rf /etc/nginx/nginx.conf &>>\$LOG_FILE
-  VALIDATE \$? "Removing default nginx.conf"
-
-  cp $CLONE_DIR/nginx.conf /etc/nginx/nginx.conf
-  VALIDATE \$? "Copying new nginx.conf"
-
+  cp "\$CLONE_DIR/nginx.conf" /etc/nginx/nginx.conf
   systemctl restart nginx
   VALIDATE \$? "Restarting nginx"
 
